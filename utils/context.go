@@ -51,11 +51,7 @@ func GetOrCreateGlobalContext(gconfig *Config) *ContextWithCancel {
 
 	var outputsCfg *Config
 	if config != nil {
-		tmp := config.GetString("namespace")
-		if tmp != nil {
-			logNameSpace = *tmp
-		}
-		if tmp = config.GetString("loglevel"); tmp != nil {
+		if tmp := config.GetString("loglevel"); tmp != nil {
 			logLevel = logger.ParseLogLevel(*tmp, logger.LogLevelDebug)
 		}
 
@@ -96,7 +92,7 @@ func GetOrCreateGlobalContext(gconfig *Config) *ContextWithCancel {
 					panic("failed to compile log filter regexp: " + err.Error())
 				}
 
-				globalLogger.Infof(logNameSpace, "Adding file output; filter=%s path=%s level=%s", *rawFilter, *path, *rawLevel)
+				globalLogger.Infof(logNameSpace, "Adding log file output; filter=%s path=%s level=%s", *rawFilter, *path, *rawLevel)
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
