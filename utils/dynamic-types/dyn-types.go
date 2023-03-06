@@ -10,6 +10,10 @@ import (
 
 var dynTypeRegistry = make(map[string]reflect.Type)
 
+// RegisterDynType  register the service
+// --> Input:
+// name     string          service name
+// i        interface{}     service class primitive
 func RegisterDynType(name string, i interface{}) {
 	fmt.Printf("Registering dynamic type %s\n", name)
 	t := reflect.TypeOf(i).Elem()
@@ -17,6 +21,14 @@ func RegisterDynType(name string, i interface{}) {
 	dynTypeRegistry[name] = t
 }
 
+// MakeDynInstance creates a dynamical instance of a service
+// --> Input:
+// name       string              service name
+// ctx        context.Context     application context
+// cfg        *utils.Config       Expects root config
+// logger     logger.Logger       logging interface
+// <-- Output:
+// 1) interface{}     service as returned with its Init()
 func MakeDynInstance(name string, ctx context.Context, cfg *utils.Config, logger logger.Logger) interface{} {
 	t, ok := dynTypeRegistry[name]
 	if !ok {
