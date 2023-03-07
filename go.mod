@@ -5,8 +5,7 @@ go 1.19
 require (
 	github.com/aws/aws-sdk-go v1.44.212
 	github.com/briandowns/spinner v1.22.0
-	github.com/buger/jsonparser v1.1.1
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/websocket v1.5.0
 	github.com/jroimartin/gocui v0.5.0
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/onsi/ginkgo v1.16.5
