@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -42,7 +43,18 @@ func (c *Vconfig) FromKey(key string) *Vconfig {
 }
 
 func (c *Vconfig) GetCfg() map[string]interface{} {
-	return c.AllSettings()
+
+	data := c.AllSettings()
+	if reflect.TypeOf(data).Kind() == reflect.Map { // with hcl never happens in fact, always []map[string]interface{}
+		return data
+	} else if reflect.TypeOf(data).Kind() == reflect.Slice {
+		sl := cast.ToSlice(data)
+		if len(sl) == 1 {
+			return cast.ToStringMap(sl[0])
+		}
+	}
+	Throwf("error getting cfg (casting to map)")
+	return nil
 }
 
 func (c *Vconfig) GetValue(key string) interface{} {
@@ -81,6 +93,24 @@ func (c *Vconfig) GetBoolDefault(key string, dflt bool) bool {
 func (c *Vconfig) GetString(key string) *string {
 	key = strings.ToLower(key)
 	rs := c.Viper.GetString(key)
+
+	if strings.HasPrefix(rs, "$") {
+		envStr := os.Getenv(rs[1:])
+		return &envStr
+	}
+	// replace value with environment variable, windows %xx% style
+	if strings.HasPrefix(rs, "%") {
+		ndx := strings.Index(rs[1:], "%")
+		if ndx < 0 {
+			envStr := os.Getenv(rs[1:])
+			return &envStr
+		}
+
+		envStr := os.Getenv(rs[1 : ndx+1])
+		d := envStr + rs[ndx+2:]
+		return &d
+	}
+
 	return &rs
 }
 
