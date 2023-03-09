@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -34,12 +35,12 @@ func GetGlobalContext() *ContextWithCancel {
 
 // GetOrCreateGlobalContext sets a new global context with logging and cancel
 // Expects a config, which is normally would be a "Logging" section
-func GetOrCreateGlobalContext(gconfig *Config) *ContextWithCancel {
+func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 	if globalContext != nil {
 		return globalContext
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	var config *Config
+	var config *Vconfig
 
 	if gconfig != nil {
 		config = gconfig.FromKey("logger")
@@ -49,7 +50,7 @@ func GetOrCreateGlobalContext(gconfig *Config) *ContextWithCancel {
 	logLevel = logger.LogLevelDebug
 	logNameSpace := "*"
 
-	var outputsCfg *Config
+	var outputsCfg *Vconfig
 	if config != nil {
 		if tmp := config.GetString("loglevel"); tmp != nil {
 			logLevel = logger.ParseLogLevel(*tmp, logger.LogLevelDebug)
@@ -73,8 +74,8 @@ func GetOrCreateGlobalContext(gconfig *Config) *ContextWithCancel {
 				panic("failed to parse output config: " + outputType)
 			}
 
-			switch outputType {
-			case "fileWriter":
+			switch strings.ToLower(outputType) {
+			case "filewriter":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
 					cfg.GetStringDefault("logLevel", "debug"),
 					cfg.GetStringDefault("path", "/tmp/test_logs"),
