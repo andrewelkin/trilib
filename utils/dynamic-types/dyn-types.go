@@ -25,11 +25,11 @@ func RegisterDynType(name string, i interface{}) {
 // --> Input:
 // name       string              service name
 // ctx        context.Context     application context
-// cfg        *utils.Config       Expects root config
+// cfg        *utils.Vconfig       Expects root config
 // logger     logger.Logger       logging interface
 // <-- Output:
 // 1) interface{}     service as returned with its Init()
-func MakeDynInstance(name string, ctx context.Context, cfg *utils.Config, logger logger.Logger) interface{} {
+func MakeDynInstance(name string, ctx context.Context, cfg *utils.Vconfig, logger logger.Logger) interface{} {
 	t, ok := dynTypeRegistry[name]
 	if !ok {
 		utils.Throwf("error initializing dynamical class '%s' : not registered", name)
