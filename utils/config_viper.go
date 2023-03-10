@@ -121,7 +121,11 @@ func (c *Vconfig) ReadConfig(filename string) *Vconfig {
 	onlyName := strings.TrimRight(strings.Replace(filepath.Base(filename), filepath.Ext(filename), "", 1), ".")
 	c.SetConfigName(onlyName) // name of config file (without extension) -- what a f innovation!
 	c.SetConfigType(strings.ToLower(strings.TrimLeft(filepath.Ext(filename), ".")))
-	c.AddConfigPath(filepath.Dir(filename))
+	path := filepath.Dir(filename)
+	if len(path) == 0 {
+		path = "./"
+	}
+	c.AddConfigPath(path)
 	err := c.ReadInConfig()
 	if err != nil {
 		Throwf("fatal error reading config file: %w", err)
