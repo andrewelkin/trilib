@@ -62,20 +62,10 @@ func (c *Vconfig) GetValue(key string) interface{} {
 	return c.Get(key)
 }
 
-func (c *Vconfig) GetFloat(key string) float64 {
-	key = strings.ToLower(key)
-	return c.GetFloat64(key)
-}
-
 func (c *Vconfig) GetFloatDefault(key string, dflt float64) float64 {
 	key = strings.ToLower(key)
 	c.SetDefault(key, dflt)
 	return c.GetFloat64(key)
-}
-
-func (c *Vconfig) GetInt(key string) int64 {
-	key = strings.ToLower(key)
-	return c.GetInt64(key)
 }
 
 func (c *Vconfig) GetIntDefault(key string, dflt int64) int64 {
