@@ -62,20 +62,10 @@ func (c *Vconfig) GetValue(key string) interface{} {
 	return c.Get(key)
 }
 
-func (c *Vconfig) GetFloat(key string) float64 {
-	key = strings.ToLower(key)
-	return c.GetFloat64(key)
-}
-
 func (c *Vconfig) GetFloatDefault(key string, dflt float64) float64 {
 	key = strings.ToLower(key)
 	c.SetDefault(key, dflt)
 	return c.GetFloat64(key)
-}
-
-func (c *Vconfig) GetInt(key string) int64 {
-	key = strings.ToLower(key)
-	return c.GetInt64(key)
 }
 
 func (c *Vconfig) GetIntDefault(key string, dflt int64) int64 {
@@ -131,7 +121,11 @@ func (c *Vconfig) ReadConfig(filename string) *Vconfig {
 	onlyName := strings.TrimRight(strings.Replace(filepath.Base(filename), filepath.Ext(filename), "", 1), ".")
 	c.SetConfigName(onlyName) // name of config file (without extension) -- what a f innovation!
 	c.SetConfigType(strings.ToLower(strings.TrimLeft(filepath.Ext(filename), ".")))
-	c.AddConfigPath(filepath.Dir(filename))
+	path := filepath.Dir(filename)
+	if len(path) == 0 {
+		path = "./"
+	}
+	c.AddConfigPath(path)
 	err := c.ReadInConfig()
 	if err != nil {
 		Throwf("fatal error reading config file: %w", err)

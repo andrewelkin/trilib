@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
+	"github.com/nats-io/nats.go"
 	"regexp"
 	"strings"
 	"sync"
@@ -18,6 +19,9 @@ type ContextWithCancel struct {
 
 var globalContext *ContextWithCancel
 
+/*
+delete me later -- unused AE 3/17/2023
+
 func SetGlobalLogger(logger logger.Logger) logger.Logger {
 	if globalContext != nil {
 		globalContext.Logger = logger
@@ -26,6 +30,7 @@ func SetGlobalLogger(logger logger.Logger) logger.Logger {
 	}
 	return logger
 }
+*/
 
 // -----------------------------------------------------------------------------------------[AE: 2023-03-1]-----------/
 
@@ -75,7 +80,29 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 			}
 
 			switch strings.ToLower(outputType) {
-			case "filewriter":
+
+			case "nats_publisher", "natspublisher", "nats":
+				subject := cfg.GetStringDefault("subject", "default-logger-subject")
+				url := cfg.GetStringDefault("url", nats.DefaultURL)
+				rawFilter := cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
+				rawLevel := cfg.GetStringDefault("logLevel", "debug")
+
+				if len(*subject) == 0 {
+					panic("failed to create nats logger : empty publishing subject")
+				}
+
+				filter, err := regexp.Compile(*rawFilter)
+				if err != nil {
+					panic("failed to compile log filter regexp: " + err.Error())
+				}
+
+				nc, err := nats.Connect(*url, nil)
+				if err != nil {
+					panic(err)
+				}
+				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug))
+
+			case "filewriter", "file":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
 					cfg.GetStringDefault("logLevel", "debug"),
 					cfg.GetStringDefault("path", "/tmp/test_logs"),
@@ -99,7 +126,6 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 					fileWriter,
 					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug),
 				)
-				continue
 
 			default:
 				panic("unknown log output type: " + outputType)
