@@ -19,6 +19,9 @@ type ContextWithCancel struct {
 
 var globalContext *ContextWithCancel
 
+/*
+delete me later -- unused AE 3/17/2023
+
 func SetGlobalLogger(logger logger.Logger) logger.Logger {
 	if globalContext != nil {
 		globalContext.Logger = logger
@@ -27,6 +30,7 @@ func SetGlobalLogger(logger logger.Logger) logger.Logger {
 	}
 	return logger
 }
+*/
 
 // -----------------------------------------------------------------------------------------[AE: 2023-03-1]-----------/
 
@@ -83,6 +87,10 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				rawFilter := cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
 				rawLevel := cfg.GetStringDefault("logLevel", "debug")
 
+				if len(*subject) == 0 {
+					panic("failed to create nats logger : empty publishing subject")
+				}
+
 				filter, err := regexp.Compile(*rawFilter)
 				if err != nil {
 					panic("failed to compile log filter regexp: " + err.Error())
@@ -92,11 +100,9 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				if err != nil {
 					panic(err)
 				}
+				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug))
 
-				nl, err := logger.NewNatsLogger(*subject, nc)
-				globalLogger.AddOutput(filter, nl, logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug))
-
-			case "filewriter":
+			case "filewriter", "file":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
 					cfg.GetStringDefault("logLevel", "debug"),
 					cfg.GetStringDefault("path", "/tmp/test_logs"),

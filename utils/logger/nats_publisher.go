@@ -7,12 +7,12 @@ type NatsLogger struct {
 	natsConn *nats.Conn
 }
 
-func NewNatsLogger(subject string, natsConn *nats.Conn) (*NatsLogger, error) {
+func NewNatsLogger(subject string, natsConn *nats.Conn) *NatsLogger {
 	nl := &NatsLogger{
 		subj:     subject,
 		natsConn: natsConn,
 	}
-	return nl, nil
+	return nl
 }
 
 func (nl *NatsLogger) Write(p []byte) (n int, err error) {
