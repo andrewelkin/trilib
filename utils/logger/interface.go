@@ -44,7 +44,7 @@ type Logger interface {
 	Fatalf(namespace, format string, a ...interface{})
 
 	// AddOutput adds a log output that receives messages where level is >= minlevel and the namespace matches filter
-	AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool)
+	AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool)
 
 	// Flush flushes the logger and clears any pending messages
 	Flush()

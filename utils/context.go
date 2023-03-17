@@ -101,7 +101,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				if err != nil {
 					panic(err)
 				}
-				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi)
+				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi, false)
 
 			case "filewriter", "file":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
@@ -125,7 +125,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
-					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false)
+					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false, true)
 
 			default:
 				panic("unknown log output type: " + outputType)
