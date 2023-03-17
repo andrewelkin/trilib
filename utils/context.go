@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
+	"github.com/nats-io/nats.go"
 	"regexp"
 	"strings"
 	"sync"
@@ -75,6 +76,26 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 			}
 
 			switch strings.ToLower(outputType) {
+
+			case "nats_publisher", "natspublisher", "nats":
+				subject := cfg.GetStringDefault("subject", "default-logger-subject")
+				url := cfg.GetStringDefault("url", nats.DefaultURL)
+				rawFilter := cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
+				rawLevel := cfg.GetStringDefault("logLevel", "debug")
+
+				filter, err := regexp.Compile(*rawFilter)
+				if err != nil {
+					panic("failed to compile log filter regexp: " + err.Error())
+				}
+
+				nc, err := nats.Connect(*url, nil)
+				if err != nil {
+					panic(err)
+				}
+
+				nl, err := logger.NewNatsLogger(*subject, nc)
+				globalLogger.AddOutput(filter, nl, logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug))
+
 			case "filewriter":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
 					cfg.GetStringDefault("logLevel", "debug"),
@@ -99,7 +120,6 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 					fileWriter,
 					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug),
 				)
-				continue
 
 			default:
 				panic("unknown log output type: " + outputType)
