@@ -117,8 +117,8 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel) {
-	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output})
+func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool) {
+	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, ansi: ansi})
 }
 
 // NewLine inserts \n before next output

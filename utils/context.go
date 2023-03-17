@@ -86,6 +86,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				url := cfg.GetStringDefault("url", nats.DefaultURL)
 				rawFilter := cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
 				rawLevel := cfg.GetStringDefault("logLevel", "debug")
+				ansi := cfg.GetBoolDefault("ansicodes", false)
 
 				if len(*subject) == 0 {
 					panic("failed to create nats logger : empty publishing subject")
@@ -100,7 +101,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				if err != nil {
 					panic(err)
 				}
-				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug))
+				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi)
 
 			case "filewriter", "file":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
@@ -124,8 +125,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
-					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug),
-				)
+					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false)
 
 			default:
 				panic("unknown log output type: " + outputType)
