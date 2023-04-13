@@ -29,7 +29,7 @@ func RegisterDynType(name string, i interface{}) {
 // logger     logger.Logger       logging interface
 // <-- Output:
 // 1) interface{}     service as returned with its Init()
-func MakeDynInstance(name string, ctx context.Context, cfg *utils.Vconfig, logger logger.Logger) interface{} {
+func MakeDynInstance(name string, ctx context.Context, cfg utils.IConfig, logger logger.Logger) interface{} {
 	t, ok := dynTypeRegistry[name]
 	if !ok {
 		utils.Throwf("error initializing dynamical class '%s' : not registered", name)
