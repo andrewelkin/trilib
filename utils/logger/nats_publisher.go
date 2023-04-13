@@ -16,6 +16,11 @@ func NewNatsLogger(subject string, natsConn *nats.Conn) *NatsLogger {
 }
 
 func (nl *NatsLogger) Write(p []byte) (n int, err error) {
-	nl.natsConn.Publish(nl.subj, p)
-	return len(p), nil
+	l := len(p)
+	if p[l-1] == '\n' {
+		nl.natsConn.Publish(nl.subj, p[:l-1])
+	} else {
+		nl.natsConn.Publish(nl.subj, p)
+	}
+	return l, nil
 }

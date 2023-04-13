@@ -71,7 +71,7 @@ func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter *regexp.Re
 	if stdoutFilter == nil {
 		stdoutFilter = LogDefaultFilter
 	}
-	logger.outputs = append(logger.outputs, logOutput{filter: stdoutFilter, dst: defaultScreenDst, minLevel: level, ansi: true})
+	logger.outputs = append(logger.outputs, logOutput{filter: stdoutFilter, dst: defaultScreenDst, minLevel: level, ansi: true, trailCR: true})
 
 	go logger.handleLogs(ctx)
 	return logger
@@ -117,8 +117,8 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool) {
-	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, ansi: ansi})
+func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool) {
+	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, ansi: ansi, trailCR: trailCR})
 }
 
 // NewLine inserts \n before next output
@@ -240,12 +240,12 @@ func (lgr *AsyncLogger) writeLogAccordingToLevel(msg logMessage) {
 				txt, _ = stripAnsi(txt)
 			}
 
-			if ansi { // it means screen
+			if ansi {
 				DefaultScreenOutputFunc(dst, txt)
 			} else {
 				io.WriteString(dst, txt)
 			}
-		}(outputConfig.dst, msg.String(0 == atomic.SwapInt32(&lgr.skipDate, 0)), outputConfig.ansi)
+		}(outputConfig.dst, msg.String(0 == atomic.SwapInt32(&lgr.skipDate, 0), outputConfig.trailCR), outputConfig.ansi)
 	}
 
 	wg.Wait()
@@ -263,13 +263,17 @@ type logMessage struct {
 }
 
 // String implements stringer
-func (lm logMessage) String(needPrefxes bool) string {
+func (lm logMessage) String(needPrefxes bool, needCR bool) string {
 	level, hasLevel := logLevels[lm.level]
 	if !hasLevel {
 		panic(fmt.Errorf("unknown log level: %v", lm.level))
 	}
+	var cr string
+	if needCR {
+		cr = "\n"
+	}
 	if needPrefxes {
-		return fmt.Sprintf("%s (%s) [%s]: %s\n", formatTime(lm.unixTimestampNS), lm.namespace, level, lm.message)
+		return fmt.Sprintf("%s (%s) [%s]: %s%s", formatTime(lm.unixTimestampNS), lm.namespace, level, lm.message, cr)
 	} else {
 		return fmt.Sprintf("%s\n", lm.message)
 	}
@@ -278,6 +282,7 @@ func (lm logMessage) String(needPrefxes bool) string {
 type logOutput struct {
 	filter   *regexp.Regexp
 	ansi     bool
+	trailCR  bool
 	dst      io.Writer
 	minLevel LogLevel
 }

@@ -16,7 +16,7 @@ type Vconfig struct {
 
 // FromKey creates a deep copy of the Vconfig section
 // this fixes viper bug when calling Sub() for hcl format
-func (c *Vconfig) FromKey(key string) *Vconfig {
+func (c *Vconfig) FromKey(key string) IConfig {
 	key = strings.ToLower(key)
 
 	subv := viper.New()
@@ -112,7 +112,7 @@ func (c *Vconfig) GetStringDefault(key string, defaultVal string) *string {
 }
 
 // ReadConfig reads json Vconfig. Throws if something is wrong
-func (c *Vconfig) ReadConfig(filename string) *Vconfig {
+func (c *Vconfig) ReadConfig(filename string) IConfig {
 
 	if c.Viper == nil {
 		c.Viper = viper.GetViper()

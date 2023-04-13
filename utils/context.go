@@ -40,12 +40,12 @@ func GetGlobalContext() *ContextWithCancel {
 
 // GetOrCreateGlobalContext sets a new global context with logging and cancel
 // Expects a config, which is normally would be a "Logging" section
-func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
+func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 	if globalContext != nil {
 		return globalContext
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	var config *Vconfig
+	var config IConfig
 
 	if gconfig != nil {
 		config = gconfig.FromKey("logger")
@@ -55,7 +55,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 	logLevel = logger.LogLevelDebug
 	logNameSpace := "*"
 
-	var outputsCfg *Vconfig
+	var outputsCfg IConfig
 	if config != nil {
 		if tmp := config.GetString("loglevel"); tmp != nil {
 			logLevel = logger.ParseLogLevel(*tmp, logger.LogLevelDebug)
@@ -101,7 +101,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				if err != nil {
 					panic(err)
 				}
-				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi)
+				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi, false)
 
 			case "filewriter", "file":
 				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
@@ -125,7 +125,7 @@ func GetOrCreateGlobalContext(gconfig *Vconfig) *ContextWithCancel {
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
-					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false)
+					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false, true)
 
 			default:
 				panic("unknown log output type: " + outputType)
