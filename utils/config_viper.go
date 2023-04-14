@@ -7,11 +7,35 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // Vconfig is just a wrapper around viper Config
 type Vconfig struct {
 	*viper.Viper
+	ro           bool
+	lastModified time.Time // last mod timestamp
+	fileName     string
+}
+
+// SetRO sets/resets Read-only flag.
+func (c *Vconfig) SetRO(ro bool) {
+	c.ro = ro
+}
+
+// GetRO returns Read-only status
+func (c *Vconfig) GetRO() bool {
+	return c.ro
+}
+
+// ModifiedQ returns true if the file modified since last ReadFile
+func (c *Vconfig) ModifiedQ() bool {
+	fileStats, _ := os.Stat(c.GetFileName())
+	return c.lastModified != fileStats.ModTime()
+}
+
+func (c *Vconfig) GetFileName() string {
+	return c.fileName
 }
 
 // FromKey creates a deep copy of the Vconfig section
@@ -38,8 +62,15 @@ func (c *Vconfig) FromKey(key string) IConfig {
 	}
 
 	return &Vconfig{
-		Viper: subv,
+		Viper:        subv,
+		fileName:     c.GetFileName(),
+		lastModified: c.lastModified,
 	}
+}
+
+func (c *Vconfig) GetStringList(key string) []string {
+	rawList := c.GetString(key)
+	return strings.Split(*rawList, ",")
 }
 
 func (c *Vconfig) GetCfg() map[string]interface{} {
@@ -118,6 +149,9 @@ func (c *Vconfig) ReadConfig(filename string) IConfig {
 		c.Viper = viper.GetViper()
 	}
 
+	fileStats, _ := os.Stat(filename)
+	c.lastModified = fileStats.ModTime()
+
 	onlyName := strings.TrimRight(strings.Replace(filepath.Base(filename), filepath.Ext(filename), "", 1), ".")
 	c.SetConfigName(onlyName) // name of config file (without extension) -- what a f innovation!
 	c.SetConfigType(strings.ToLower(strings.TrimLeft(filepath.Ext(filename), ".")))
@@ -138,4 +172,8 @@ func (c *Vconfig) ReadConfig(filename string) IConfig {
 func (c *Vconfig) WriteConfigX() error {
 	Throwf("WriteConfigX not implemented yet")
 	return nil
+}
+
+func (c *Vconfig) SetFileName(newName string) {
+	c.fileName = newName
 }
