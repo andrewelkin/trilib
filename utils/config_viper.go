@@ -138,8 +138,7 @@ func (c *Vconfig) GetString(key string) *string {
 func (c *Vconfig) GetStringDefault(key string, defaultVal string) *string {
 	key = strings.ToLower(key)
 	c.SetDefault(key, defaultVal)
-	rs := c.Viper.GetString(key)
-	return &rs
+	return c.GetString(key)
 }
 
 // ReadConfig reads json Vconfig. Throws if something is wrong
@@ -149,6 +148,7 @@ func (c *Vconfig) ReadConfig(filename string) IConfig {
 		c.Viper = viper.GetViper()
 	}
 
+	c.fileName = filename
 	fileStats, _ := os.Stat(filename)
 	c.lastModified = fileStats.ModTime()
 
