@@ -66,7 +66,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 		outputsCfg = config.FromKey("outputs")
 	}
 
-	// create the main global logger (default writes to STDOUT)
+	// create the strategies global logger (default writes to STDOUT)
 	globalLogger := logger.GetOrCreateGlobalLogger(ctx, logLevel)
 
 	// add additional writers, if configured

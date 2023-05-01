@@ -278,7 +278,7 @@ var curNdx = -1
 
 func switchView(g *gocui.Gui, v *gocui.View) error {
 	if v == nil || v.Name() == "stdin" {
-		m, err := g.SetCurrentView("main")
+		m, err := g.SetCurrentView("strategies")
 		m.Frame = true
 		if v != nil {
 			v.Frame = false
@@ -371,7 +371,7 @@ func InitKeybindings(g *gocui.Gui, cmdhandler func(string)) error {
 	if err := g.SetKeybinding("stdin", gocui.KeyTab, gocui.ModNone, switchView); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyTab, gocui.ModNone, switchView); err != nil {
+	if err := g.SetKeybinding("strategies", gocui.KeyTab, gocui.ModNone, switchView); err != nil {
 		return err
 	}
 
@@ -393,14 +393,14 @@ func InitKeybindings(g *gocui.Gui, cmdhandler func(string)) error {
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyEnd, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyEnd, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			LogWin.Autoscroll = true
 			return nil
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyHome, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyHome, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			LogWin.Autoscroll = false
 			if err := LogWin.SetOrigin(0, 0); err != nil {
@@ -425,14 +425,14 @@ func InitKeybindings(g *gocui.Gui, cmdhandler func(string)) error {
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyPgdn, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyPgdn, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			scrollView(LogWin, maxY-3)
 			return nil
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyPgup, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyPgup, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			scrollView(LogWin, -maxY+3)
 			return nil
@@ -454,14 +454,14 @@ func InitKeybindings(g *gocui.Gui, cmdhandler func(string)) error {
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyArrowUp, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyArrowUp, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			scrollView(LogWin, -1)
 			return nil
 		}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("main", gocui.KeyArrowDown, gocui.ModNone,
+	if err := g.SetKeybinding("strategies", gocui.KeyArrowDown, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			scrollView(LogWin, 1)
 			return nil
@@ -473,7 +473,7 @@ func InitKeybindings(g *gocui.Gui, cmdhandler func(string)) error {
 
 func Layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if v, err := g.SetView("main", 0, 0, maxX-1, maxY-3); err != nil {
+	if v, err := g.SetView("strategies", 0, 0, maxX-1, maxY-3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
