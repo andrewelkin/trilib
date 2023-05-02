@@ -145,7 +145,7 @@ func (c *Vconfig) GetStringDefault(key string, defaultVal string) *string {
 func (c *Vconfig) ReadConfig(filename string) IConfig {
 
 	if c.Viper == nil {
-		c.Viper = viper.GetViper()
+		c.Viper = viper.New()
 	}
 
 	c.fileName = filename
