@@ -120,15 +120,17 @@ func (c *Vconfig) GetString(key string) *string {
 		return &envStr
 	}
 	// replace value with environment variable, windows %xx% style
-	if strings.HasPrefix(rs, "%") {
-		ndx := strings.Index(rs[1:], "%")
+	ndx0 := strings.Index(rs, "%")
+	if ndx0 >= 0 {
+		ndx := strings.Index(rs[ndx0+1:], "%")
 		if ndx < 0 {
-			envStr := os.Getenv(rs[1:])
-			return &envStr
+			envStr := os.Getenv(rs[ndx0+1:])
+			d := rs[:ndx0] + envStr
+			return &d
 		}
 
-		envStr := os.Getenv(rs[1 : ndx+1])
-		d := envStr + rs[ndx+2:]
+		envStr := os.Getenv(rs[ndx0+1 : ndx0+ndx+1])
+		d := rs[:ndx0] + envStr + rs[ndx0+ndx+2:]
 		return &d
 	}
 
