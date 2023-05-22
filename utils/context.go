@@ -97,7 +97,17 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 					panic("failed to compile log filter regexp: " + err.Error())
 				}
 
-				nc, err := nats.Connect(*url, nil)
+				var nkeyOpt nats.Option
+				nSeedFile := *cfg.GetStringDefault("nats_seed", "")
+				if len(nSeedFile) > 0 {
+					var err error
+					nkeyOpt, err = nats.NkeyOptionFromSeed(nSeedFile)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				nc, err := nats.Connect(*url, nkeyOpt)
 				if err != nil {
 					panic(err)
 				}
