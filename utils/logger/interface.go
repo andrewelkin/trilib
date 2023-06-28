@@ -78,3 +78,9 @@ func GetOrCreateGlobalLoggerEx(ctx context.Context, baseLevel LogLevel, stdOutFi
 func GetGlobalLogger() Logger {
 	return globalLogger
 }
+
+type Formatter interface {
+	String(logMessage) string
+	NewLine()
+	NoDateNextLine()
+}

@@ -25,8 +25,13 @@ func TestAsyncLogger(t *testing.T) {
 	var capturedOutput bytes.Buffer
 	var outputs []logOutput
 	testLogger := &AsyncLogger{
-		logs:    make(chan logMessage),
-		outputs: append(outputs, logOutput{dst: &capturedOutput, minLevel: LogLevelDebug, filter: FilterMatchAll}),
+		logs: make(chan logMessage),
+		outputs: append(outputs, logOutput{
+			dst:       &capturedOutput,
+			minLevel:  LogLevelDebug,
+			filter:    FilterMatchAll,
+			formatter: NewSimpleFormatter(false, true),
+		}),
 	}
 	go testLogger.handleLogs(ctx)
 
@@ -60,8 +65,13 @@ func TestAsyncLoggerLogLevels(t *testing.T) {
 	var capturedOutput bytes.Buffer
 	var outputs []logOutput
 	testLogger := &AsyncLogger{
-		logs:    make(chan logMessage),
-		outputs: append(outputs, logOutput{dst: &capturedOutput, minLevel: LogLevelWarn, filter: FilterMatchAll}),
+		logs: make(chan logMessage),
+		outputs: append(outputs, logOutput{
+			dst:       &capturedOutput,
+			minLevel:  LogLevelWarn,
+			filter:    FilterMatchAll,
+			formatter: NewSimpleFormatter(false, true),
+		}),
 	}
 	go testLogger.handleLogs(ctx)
 
@@ -91,7 +101,12 @@ func TestAsyncLoggerDumpLogs(t *testing.T) {
 		logs: make(chan logMessage),
 
 		// note: log level is warn, but the dump should contain even the info and debug logs
-		outputs: append(outputs, logOutput{dst: &capturedOutput, minLevel: LogLevelWarn, filter: FilterMatchAll}),
+		outputs: append(outputs, logOutput{
+			dst:       &capturedOutput,
+			minLevel:  LogLevelWarn,
+			filter:    FilterMatchAll,
+			formatter: NewSimpleFormatter(false, true),
+		}),
 	}
 	go testLogger.handleLogs(ctx)
 
@@ -132,10 +147,10 @@ func TestSpecialPrefix(t *testing.T) {
 	var screenBuffer, fileBuffer bytes.Buffer
 	outputs := []logOutput{
 		// this should get all except where the namespace is or starts with "_"
-		{dst: &screenBuffer, minLevel: LogLevelDebug, filter: FilterUnderscore},
+		{dst: &screenBuffer, minLevel: LogLevelDebug, filter: FilterUnderscore, formatter: NewSimpleFormatter(false, true)},
 
 		// this should get all logs regardless of namespace
-		{dst: &fileBuffer, minLevel: LogLevelDebug, filter: FilterMatchAll},
+		{dst: &fileBuffer, minLevel: LogLevelDebug, filter: FilterMatchAll, formatter: NewSimpleFormatter(false, true)},
 	}
 
 	testLogger := &AsyncLogger{
