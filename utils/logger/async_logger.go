@@ -114,8 +114,17 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool) {
-	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, formatter: NewSimpleFormatter(ansi, trailCR)})
+func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
+	var fmt Formatter
+	for _, opt := range options {
+		if fmtOpt, ok := opt.(Formatter); ok {
+			fmt = fmtOpt
+		}
+	}
+	if fmt == nil {
+		fmt = NewSimpleFormatter(ansi, trailCR)
+	}
+	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, formatter: fmt})
 }
 
 // NewLine inserts \n before next output
