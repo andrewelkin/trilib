@@ -44,7 +44,7 @@ type Logger interface {
 	Fatalf(namespace, format string, a ...interface{})
 
 	// AddOutput adds a log output that receives messages where level is >= minlevel and the namespace matches filter
-	AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool)
+	AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, opts ...interface{})
 
 	// Flush flushes the logger and clears any pending messages
 	Flush()
@@ -77,4 +77,10 @@ func GetOrCreateGlobalLoggerEx(ctx context.Context, baseLevel LogLevel, stdOutFi
 // GetGlobalLogger retrieves an initialized global logger, or nil
 func GetGlobalLogger() Logger {
 	return globalLogger
+}
+
+type Formatter interface {
+	String(logMessage) string
+	NewLine()
+	NoDateNextLine()
 }

@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 // LogDefaultFilter is the regular expression that is used in new loggers as the filter applied to the default
@@ -42,10 +41,7 @@ type AsyncLogger struct {
 	logs    chan logMessage
 	outputs []logOutput
 
-	skipDate  int32  // start next screen output without date.service/level mark
-	needCRLF  int32  // start next screen output with new line
-	ansiReset string // code for resetting ansi
-	//	ansiBlack string // code for black -- fixing a bug in ansi lib
+	formatter Formatter
 }
 
 func SetDefaultScreenIO(dst io.Writer) {
@@ -63,15 +59,16 @@ func SetDefaultScreenIOfunc(f func(io.Writer, string)) {
 // stdout filter is specified, the regular expression defined by LogDefaultFilter is used.
 func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter *regexp.Regexp) *AsyncLogger {
 	logger := &AsyncLogger{
-		logs:      make(chan logMessage, LogBufferSize),
-		ansiReset: ansi.ColorCode("reset"),
-		//ansiBlack: ansi.ColorCode("black"),
+		logs: make(chan logMessage, LogBufferSize),
+		// ansiBlack: ansi.ColorCode("black"),
 	}
 
 	if stdoutFilter == nil {
 		stdoutFilter = LogDefaultFilter
 	}
-	logger.outputs = append(logger.outputs, logOutput{filter: stdoutFilter, dst: defaultScreenDst, minLevel: level, ansi: true, trailCR: true})
+	logger.outputs = append(logger.outputs, logOutput{
+		filter: stdoutFilter, dst: defaultScreenDst, minLevel: level, formatter: NewSimpleFormatter(true, true),
+	})
 
 	go logger.handleLogs(ctx)
 	return logger
@@ -117,19 +114,31 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool) {
-	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, ansi: ansi, trailCR: trailCR})
+func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
+	var fmt Formatter
+	for _, opt := range options {
+		if fmtOpt, ok := opt.(Formatter); ok {
+			fmt = fmtOpt
+		}
+	}
+	if fmt == nil {
+		fmt = NewSimpleFormatter(ansi, trailCR)
+	}
+	lgr.outputs = append(lgr.outputs, logOutput{filter: filter, minLevel: minLevel, dst: output, formatter: fmt})
 }
 
 // NewLine inserts \n before next output
 func (lgr *AsyncLogger) NewLine() {
-	atomic.StoreInt32(&lgr.needCRLF, 1)
-
+	for _, outputConfig := range lgr.outputs {
+		outputConfig.formatter.NewLine()
+	}
 }
 
 // NoDateNextLine starts next line without date/debug/servie label
 func (lgr *AsyncLogger) NoDateNextLine() {
-	atomic.StoreInt32(&lgr.skipDate, 1)
+	for _, outputConfig := range lgr.outputs {
+		outputConfig.formatter.NoDateNextLine()
+	}
 }
 
 // Flush implements Logger
@@ -224,28 +233,12 @@ func (lgr *AsyncLogger) writeLogAccordingToLevel(msg logMessage) {
 		}
 
 		wg.Add(1)
-		go func(dst io.Writer, txt string, ansi bool) {
+		go func(output logOutput) {
 			defer wg.Done()
 
-			if ansi {
-				if 1 == atomic.SwapInt32(&lgr.needCRLF, 0) {
-					txt = "\n" + txt
-				}
-				var mod bool
-				if txt, mod = expandAnsi(txt); mod {
-					txt += lgr.ansiReset
-				}
-
-			} else {
-				txt, _ = stripAnsi(txt)
-			}
-
-			if ansi {
-				DefaultScreenOutputFunc(dst, txt)
-			} else {
-				io.WriteString(dst, txt)
-			}
-		}(outputConfig.dst, msg.String(0 == atomic.SwapInt32(&lgr.skipDate, 0), outputConfig.trailCR), outputConfig.ansi)
+			txt := output.formatter.String(msg)
+			_, _ = io.WriteString(output.dst, txt)
+		}(outputConfig)
 	}
 
 	wg.Wait()
@@ -262,27 +255,9 @@ type logMessage struct {
 	unixTimestampNS int64
 }
 
-// String implements stringer
-func (lm logMessage) String(needPrefxes bool, needCR bool) string {
-	level, hasLevel := logLevels[lm.level]
-	if !hasLevel {
-		panic(fmt.Errorf("unknown log level: %v", lm.level))
-	}
-	var cr string
-	if needCR {
-		cr = "\n"
-	}
-	if needPrefxes {
-		return fmt.Sprintf("%s (%s) [%s]: %s%s", formatTime(lm.unixTimestampNS), lm.namespace, level, lm.message, cr)
-	} else {
-		return fmt.Sprintf("%s\n", lm.message)
-	}
-}
-
 type logOutput struct {
-	filter   *regexp.Regexp
-	ansi     bool
-	trailCR  bool
-	dst      io.Writer
-	minLevel LogLevel
+	filter    *regexp.Regexp
+	dst       io.Writer
+	minLevel  LogLevel
+	formatter Formatter
 }

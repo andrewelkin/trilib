@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
 	"github.com/nats-io/nats.go"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -136,6 +137,26 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 					filter,
 					fileWriter,
 					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false, true)
+
+			case "jsonstream", "jsonout", "prod":
+				rawLevel, rawFilter :=
+					cfg.GetStringDefault("logLevel", "info"),
+					cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
+
+				filter, err := regexp.Compile(*rawFilter)
+				if err != nil {
+					panic("failed to compile log filter regexp: " + err.Error())
+				}
+
+				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", *rawFilter, *rawLevel)
+				globalLogger.AddOutput(
+					filter,
+					os.Stderr,
+					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug),
+					false,
+					true,
+					logger.NewJsonFormatter(),
+				)
 
 			default:
 				panic("unknown log output type: " + outputType)
