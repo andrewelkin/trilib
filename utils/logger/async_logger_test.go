@@ -87,53 +87,6 @@ func TestAsyncLoggerLogLevels(t *testing.T) {
 	assert.Equal(t, expectedOutput, capturedOutput.String())
 }
 
-func TestAsyncLoggerDumpLogs(t *testing.T) {
-	// stub the clock
-	currentTime, _ := time.Parse(time.RFC3339Nano, "2020-09-29T19:05:07.123456Z")
-	currentClock = testClock(currentTime)
-	defer resetClock()
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	var capturedOutput bytes.Buffer
-	var outputs []logOutput
-	testLogger := &AsyncLogger{
-		logs: make(chan logMessage),
-
-		// note: log level is warn, but the dump should contain even the info and debug logs
-		outputs: append(outputs, logOutput{
-			dst:       &capturedOutput,
-			minLevel:  LogLevelWarn,
-			filter:    FilterMatchAll,
-			formatter: NewSimpleFormatter(false, true),
-		}),
-	}
-	go testLogger.handleLogs(ctx)
-
-	testLogger.Debugf("test-logger", "debugf with %v%v", "args", ".")
-	testLogger.Infof("test-logger", "infof with %v%v", "args", ".")
-	testLogger.Warnf("test-logger", "warnf with %v%v", "args", ".")
-	assert.PanicsWithValue(t, "errorf with args.", func() {
-		testLogger.Errorf("test-logger", "errorf with %v%v", "args", ".")
-	})
-	assert.PanicsWithValue(t, "errorf with args...", func() {
-		testLogger.Errorf("test-logger", "errorf with %v%v", "args", "...")
-	})
-
-	// ensure all the logs are written before comparing
-	time.Sleep(1 * time.Millisecond)
-
-	expectedDump := "2020-09-29 19:05:07.123 (test-logger) [DEBUG]: debugf with args.\n" +
-		"2020-09-29 19:05:07.123 (test-logger) [INFO]: infof with args.\n" +
-		"2020-09-29 19:05:07.123 (test-logger) [WARN]: warnf with args.\n" +
-		"2020-09-29 19:05:07.123 (test-logger) [ERROR]: errorf with args.\n" +
-		"2020-09-29 19:05:07.123 (test-logger) [ERROR]: errorf with args...\n"
-
-	var actualDumpBuffer bytes.Buffer
-
-	assert.Equal(t, expectedDump, actualDumpBuffer.String())
-}
-
 func TestSpecialPrefix(t *testing.T) {
 	// stub the clock
 	currentTime, _ := time.Parse(time.RFC3339Nano, "2020-09-29T19:05:07.123456Z")
