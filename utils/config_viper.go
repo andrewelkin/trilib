@@ -164,7 +164,7 @@ func (c *Vconfig) ReadConfig(filename string) IConfig {
 	c.AddConfigPath(path)
 	err := c.ReadInConfig()
 	if err != nil {
-		Throwf("fatal error reading config file: %w", err)
+		Throwf("fatal error reading config file: %s", err.Error())
 	}
 
 	return c
