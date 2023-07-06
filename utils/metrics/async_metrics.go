@@ -2,11 +2,17 @@ package metrics
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	globalMetrics Metrics
+	once          sync.Once
 )
 
 type AsyncMetrics struct {
@@ -183,4 +189,15 @@ func (col *AsyncMetrics) StartHTTPServer(port string) {
 			panic("Could not start HTTP server: " + err.Error())
 		}
 	}()
+}
+
+func GetOrCreateGlobalMetrics(ctx context.Context) Metrics {
+	once.Do(func() {
+		globalMetrics = NewPrometheusMetrics(ctx)
+	})
+	return globalMetrics
+}
+
+func GetGlobalMetrics() Metrics {
+	return globalMetrics
 }

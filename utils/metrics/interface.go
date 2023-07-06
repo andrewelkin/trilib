@@ -1,10 +1,5 @@
 package metrics
 
-import (
-	"context"
-	"sync"
-)
-
 // MetricType represents the possible types of metrics (Counter, Gauge, Summary, Histogram)
 type MetricType uint
 
@@ -42,20 +37,4 @@ type MetricData struct {
 type Metrics interface {
 	Emit(metric *MetricDefinition, value float64) error
 	Flush()
-}
-
-var (
-	globalMetrics Metrics
-	once          sync.Once
-)
-
-func GetOrCreateGlobalMetrics(ctx context.Context) Metrics {
-	once.Do(func() {
-		globalMetrics = NewPrometheusMetrics(ctx)
-	})
-	return globalMetrics
-}
-
-func GetGlobalMetrics() Metrics {
-	return globalMetrics
 }

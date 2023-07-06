@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
-func TestCollect(t *testing.T) {
+func TestComellect(t *testing.T) {
 	ctx := context.Background()
 
 	collector := NewPrometheusMetrics(ctx)
