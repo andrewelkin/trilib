@@ -8,8 +8,6 @@ import (
 	"github.com/jroimartin/gocui"
 	"io"
 	"log"
-	"os"
-	"os/signal"
 	"strings"
 	"time"
 )
@@ -235,17 +233,6 @@ func DelConfView(g *gocui.Gui) error {
 }
 
 // -----------------------------------------------------------------------------------------[AE: 2023-03-1]-----------/
-
-func HandleShutdowns(ctx *ContextWithCancel) *ContextWithCancel {
-	shutdownSignalChan := make(chan os.Signal, 1)
-	signal.Notify(shutdownSignalChan, os.Interrupt, os.Kill)
-	go func(ctx *ContextWithCancel) {
-		for {
-			ctx.Logger.Infof("*", "'%v' signal received, please type 'quit' to exit", <-shutdownSignalChan)
-		}
-	}(ctx)
-	return ctx
-}
 
 func scrollView(v *gocui.View, dy int) error {
 	if v != nil {
