@@ -99,7 +99,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 				}
 
 				var nkeyOpt nats.Option
-				nSeedFile := *cfg.GetStringDefault("nats_seed", "")
+				nSeedFile := *cfg.GetStringDefault("natsSeed", "")
 				if len(nSeedFile) > 0 {
 					var err error
 					nkeyOpt, err = nats.NkeyOptionFromSeed(nSeedFile)
