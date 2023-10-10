@@ -3,17 +3,17 @@ package logger
 import (
 	"context"
 	"fmt"
+	"github.com/dlclark/regexp2"
 	"github.com/mgutz/ansi"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 )
 
 // LogDefaultFilter is the regular expression that is used in new loggers as the filter applied to the default
 // output (stdout). By default, it is set to filter out logs where the namespace is prefixed with an underscore.
-var LogDefaultFilter *regexp.Regexp = FilterUnderscore
+var LogDefaultFilter *regexp2.Regexp = FilterUnderscore
 
 // LogBufferSize is the size of the pending log buffer (number of logs in the write queue that can be present until log
 // requests start blocking in the calling go-routine).
@@ -57,7 +57,7 @@ func SetDefaultScreenIOfunc(f func(io.Writer, string)) {
 //
 // If stdoutFilter is specified, logs written to stdout must have a namspace that matches. If no
 // stdout filter is specified, the regular expression defined by LogDefaultFilter is used.
-func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter *regexp.Regexp) *AsyncLogger {
+func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter *regexp2.Regexp) *AsyncLogger {
 	logger := &AsyncLogger{
 		logs: make(chan logMessage, LogBufferSize),
 		// ansiBlack: ansi.ColorCode("black"),
@@ -114,7 +114,7 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
+func (lgr *AsyncLogger) AddOutput(filter *regexp2.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
 	var fmt Formatter
 	for _, opt := range options {
 		if fmtOpt, ok := opt.(Formatter); ok {
@@ -224,10 +224,9 @@ func stripAnsi(t string) (string, bool) {
 func (lgr *AsyncLogger) writeLogAccordingToLevel(msg logMessage) {
 	var wg sync.WaitGroup
 	for _, outputConfig := range lgr.outputs {
-		if !outputConfig.filter.MatchString(msg.namespace) {
+		if ok, _ := outputConfig.filter.MatchString(msg.namespace); !ok {
 			continue
 		}
-
 		if uint(outputConfig.minLevel) > uint(msg.level) {
 			return
 		}
@@ -256,7 +255,7 @@ type logMessage struct {
 }
 
 type logOutput struct {
-	filter    *regexp.Regexp
+	filter    *regexp2.Regexp
 	dst       io.Writer
 	minLevel  LogLevel
 	formatter Formatter

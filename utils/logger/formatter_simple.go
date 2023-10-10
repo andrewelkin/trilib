@@ -2,9 +2,8 @@ package logger
 
 import (
 	"fmt"
-	"sync/atomic"
-
 	"github.com/mgutz/ansi"
+	"sync/atomic"
 )
 
 type SimpleFormatter struct {
