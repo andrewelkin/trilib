@@ -3,9 +3,9 @@ package utils
 import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
+	"github.com/dlclark/regexp2"
 	"github.com/nats-io/nats.go"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 )
@@ -63,7 +63,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 		}
 
 		// allow the default stdout log namespace filter to be overridden by the "filter" config field
-		logger.LogDefaultFilter = regexp.MustCompile(*config.GetStringDefault("filter", logger.LogDefaultFilter.String()))
+		logger.LogDefaultFilter = regexp2.MustCompile(*config.GetStringDefault("filter", logger.LogDefaultFilter.String()), regexp2.None)
 		outputsCfg = config.FromKey("outputs")
 	}
 
@@ -93,7 +93,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 					panic("failed to create nats logger : empty publishing subject")
 				}
 
-				filter, err := regexp.Compile(*rawFilter)
+				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
 				if err != nil {
 					panic("failed to compile log filter regexp: " + err.Error())
 				}
@@ -127,7 +127,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 				if err != nil {
 					panic("failed to create file writer: " + err.Error())
 				}
-				filter, err := regexp.Compile(*rawFilter)
+				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
 				if err != nil {
 					panic("failed to compile log filter regexp: " + err.Error())
 				}
@@ -143,7 +143,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 					cfg.GetStringDefault("logLevel", "info"),
 					cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
 
-				filter, err := regexp.Compile(*rawFilter)
+				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
 				if err != nil {
 					panic("failed to compile log filter regexp: " + err.Error())
 				}
