@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"github.com/dlclark/regexp2"
 	"io"
 )
 
@@ -44,7 +43,7 @@ type Logger interface {
 	Fatalf(namespace, format string, a ...interface{})
 
 	// AddOutput adds a log output that receives messages where level is >= minlevel and the namespace matches filter
-	AddOutput(filter *regexp2.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, opts ...interface{})
+	AddOutput(filter FilterFunc, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, opts ...interface{})
 
 	// Flush flushes the logger and clears any pending messages
 	Flush()
@@ -61,13 +60,13 @@ var globalLogger Logger
 // GetOrCreateGlobalLogger retrieves an initialized global logger, or creates one if it has not yet been created with ctx
 func GetOrCreateGlobalLogger(ctx context.Context, baseLevel LogLevel) Logger {
 	if globalLogger == nil {
-		globalLogger = NewAsyncLogger(ctx, baseLevel, nil)
+		globalLogger = NewAsyncLogger(ctx, baseLevel, FilterMatchAll)
 	}
 	return globalLogger
 }
 
 // GetOrCreateGlobalLoggerEx sames as above but with the filter option
-func GetOrCreateGlobalLoggerEx(ctx context.Context, baseLevel LogLevel, stdOutFilter *regexp2.Regexp) Logger {
+func GetOrCreateGlobalLoggerEx(ctx context.Context, baseLevel LogLevel, stdOutFilter FilterFunc) Logger {
 	if globalLogger == nil {
 		globalLogger = NewAsyncLogger(ctx, baseLevel, stdOutFilter)
 	}

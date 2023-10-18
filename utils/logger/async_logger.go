@@ -3,7 +3,6 @@ package logger
 import (
 	"context"
 	"fmt"
-	"github.com/dlclark/regexp2"
 	"github.com/mgutz/ansi"
 	"io"
 	"os"
@@ -13,7 +12,7 @@ import (
 
 // LogDefaultFilter is the regular expression that is used in new loggers as the filter applied to the default
 // output (stdout). By default, it is set to filter out logs where the namespace is prefixed with an underscore.
-var LogDefaultFilter *regexp2.Regexp = FilterUnderscore
+var LogDefaultFilter = FilterUnderscore
 
 // LogBufferSize is the size of the pending log buffer (number of logs in the write queue that can be present until log
 // requests start blocking in the calling go-routine).
@@ -57,14 +56,14 @@ func SetDefaultScreenIOfunc(f func(io.Writer, string)) {
 //
 // If stdoutFilter is specified, logs written to stdout must have a namspace that matches. If no
 // stdout filter is specified, the regular expression defined by LogDefaultFilter is used.
-func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter *regexp2.Regexp) *AsyncLogger {
+func NewAsyncLogger(ctx context.Context, level LogLevel, stdoutFilter FilterFunc) *AsyncLogger {
 	logger := &AsyncLogger{
 		logs: make(chan logMessage, LogBufferSize),
 		// ansiBlack: ansi.ColorCode("black"),
 	}
 
 	if stdoutFilter == nil {
-		stdoutFilter = LogDefaultFilter
+		stdoutFilter = FilterMatchAll
 	}
 	logger.outputs = append(logger.outputs, logOutput{
 		filter: stdoutFilter, dst: defaultScreenDst, minLevel: level, formatter: NewSimpleFormatter(true, true),
@@ -114,7 +113,7 @@ func (lgr *AsyncLogger) Fatalf(namespace, format string, a ...interface{}) {
 }
 
 // AddOutput implements Logger
-func (lgr *AsyncLogger) AddOutput(filter *regexp2.Regexp, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
+func (lgr *AsyncLogger) AddOutput(filter FilterFunc, output io.Writer, minLevel LogLevel, ansi bool, trailCR bool, options ...interface{}) {
 	var fmt Formatter
 	for _, opt := range options {
 		if fmtOpt, ok := opt.(Formatter); ok {
@@ -160,13 +159,15 @@ func (lgr *AsyncLogger) handleLogs(ctx context.Context) {
 		case log := <-lgr.logs:
 			lgr.writeLogAccordingToLevel(log)
 		case <-ctx.Done():
-			lgr.mux.Lock()
-			defer lgr.mux.Unlock()
+			func() {
+				lgr.mux.Lock()
+				defer lgr.mux.Unlock()
 
-			// flush any pending logs, then stop accepting new onces
-			lgr.Flush()
-			lgr.blockLogs = true
-			close(lgr.logs)
+				// flush any pending logs, then stop accepting new onces
+				lgr.Flush()
+				lgr.blockLogs = true
+				close(lgr.logs)
+			}()
 			return
 		}
 	}
@@ -224,7 +225,7 @@ func stripAnsi(t string) (string, bool) {
 func (lgr *AsyncLogger) writeLogAccordingToLevel(msg logMessage) {
 	var wg sync.WaitGroup
 	for _, outputConfig := range lgr.outputs {
-		if ok, _ := outputConfig.filter.MatchString(msg.namespace); !ok {
+		if ok := outputConfig.filter(msg.namespace); !ok {
 			continue
 		}
 		if uint(outputConfig.minLevel) > uint(msg.level) {
@@ -255,7 +256,7 @@ type logMessage struct {
 }
 
 type logOutput struct {
-	filter    *regexp2.Regexp
+	filter    FilterFunc
 	dst       io.Writer
 	minLevel  LogLevel
 	formatter Formatter
