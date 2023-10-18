@@ -21,8 +21,8 @@ func TestFilterTypeToFunc_String(t *testing.T) {
 	if !filterFunc("test") {
 		t.Error("expected true when input string is exactly 'test'")
 	}
-	if filterFunc("123test") {
-		t.Error("expected false when input string is not exactly 'test'")
+	if !filterFunc("123test") {
+		t.Error("expected true when input string is not exactly 'test'")
 	}
 }
 

@@ -1,6 +1,9 @@
 package logger
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 type FilterFunc func(string) bool
 
@@ -27,7 +30,7 @@ func Filter[F FilterType](f F) FilterFunc {
 	case string:
 		if regexp.QuoteMeta(f) == f {
 			return func(s string) bool {
-				return f == s
+				return strings.Contains(s, f)
 			}
 		}
 		return regexp.MustCompile(f).MatchString
