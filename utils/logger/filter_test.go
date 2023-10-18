@@ -62,16 +62,15 @@ func TestFilterTypeToFunc_FilterAll(t *testing.T) {
 func TestGenericFilter_And(t *testing.T) {
 	r1 := regexp.MustCompile("^test")
 	r2 := regexp.MustCompile("123$")
-	gf := NewFilter(r1)
-	gfAnd := gf.And(r2)
+	gfAnd := NewFilter(r1).And(r2).Done()
 
-	if !gfAnd.filter("test123") {
+	if !gfAnd("test123") {
 		t.Error("expected true when input string starts with 'test' and ends with '123' after And operation")
 	}
-	if gfAnd.filter("123test") {
+	if gfAnd("123test") {
 		t.Error("expected false when input string does not start with 'test' but ends with '123' after And operation")
 	}
-	if gfAnd.filter("test124") {
+	if gfAnd("test124") {
 		t.Error("expected false when input string starts with 'test' but does not end with '123' after And operation")
 	}
 }

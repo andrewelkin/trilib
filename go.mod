@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/briandowns/spinner v1.22.0
-	github.com/dlclark/regexp2 v1.10.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/jroimartin/gocui v0.5.0

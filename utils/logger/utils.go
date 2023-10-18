@@ -8,7 +8,7 @@ import (
 )
 
 // FilterUnderscore will match all namespaces except those prefixed with "_"
-var FilterUnderscore = FilterCompile(regexp.MustCompile(`^([^_]+(.*)?)?$`))
+var FilterUnderscore = Filter(regexp.MustCompile(`^([^_]+(.*)?)?$`))
 
 // ParseLogLevel tries to parse raw into a log level, if it cant, returns defaultLevel
 func ParseLogLevel(raw string, defaultLevel LogLevel) LogLevel {
