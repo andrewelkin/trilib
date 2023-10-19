@@ -28,7 +28,7 @@ func TestGetOrCreateGlobalContext(t *testing.T) {
 			ctx.Logger.Debugf(acceptString, "test")
 			ctx.Logger.Debugf(excludeString, "test")
 			ctx.Logger.Debugf(underscoreString, "test")
-		}, "accept test\nexclude test\n", nil, nil},
+		}, "accept test\nexclude test\n_testNS test\n", nil, nil},
 		{func(ctx *ContextWithCancel) {
 			ctx.Logger.Debugf(acceptString, "test")
 			ctx.Logger.Debugf(excludeString, "test")

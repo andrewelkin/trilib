@@ -123,7 +123,7 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 			case "nats_publisher", "natspublisher", "nats":
 				subject := cfg.GetStringDefault("subject", "default-logger-subject")
 				url := cfg.GetStringDefault("url", nats.DefaultURL)
-				filter := filterFromConfig(cfg, defaultFilter)
+				filter := filterFromConfig(cfg, logger.FilterMatchAll)
 
 				rawLevel := cfg.GetStringDefault("logLevel", "debug")
 				ansi := cfg.GetBoolDefault("ansicodes", false)
@@ -154,7 +154,7 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 					cfg.GetStringDefault("path", "/tmp/test_logs"),
 					cfg.GetStringDefault("filePrefix", ""),
 					cfg.GetStringDefault("fileSuffix", ".log"),
-					filterFromConfig(cfg, defaultFilter),
+					filterFromConfig(cfg, logger.FilterMatchAll),
 					cfg.GetBoolDefault("skipRepeating", true)
 
 				fileWriter, err := logger.NewFileWriter(*path, prefix, suffix, skipRepeating)
@@ -171,7 +171,7 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 			case "jsonstream", "jsonout", "prod":
 				rawLevel, filter :=
 					cfg.GetStringDefault("logLevel", "info"),
-					filterFromConfig(cfg, defaultFilter)
+					filterFromConfig(cfg, logger.FilterMatchAll)
 
 				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", filter, *rawLevel)
 				globalLogger.AddOutput(
