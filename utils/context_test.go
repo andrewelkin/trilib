@@ -5,6 +5,7 @@ import (
 	"github.com/andrewelkin/trilib/utils/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/nats-io/nats.go"
+	"strings"
 	"testing"
 	"time"
 )
@@ -13,14 +14,37 @@ func TestGetOrCreateGlobalContext(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	globalLogger, natsLogger := logger.NewMockLogger(ctrl), logger.NewMockLogger(ctrl)
-	globalLogger.EXPECT().AddOutput(gomock.Any(), gomock.Any(), logger.LogLevel(0), false, false)
-	globalLogger.EXPECT().Infof("*", "Creating global context with default logger level %v and namespace %v", gomock.Any(), gomock.Any())
-	globalLogger.EXPECT().Debugf("*", "Global logger created")
-	ctx := CreateMockedContext(ctrl, nil, nil, nil, nil, []*logger.MockLogger{globalLogger, globalLogger, natsLogger})
+	tests := []struct {
+		Actor  func(*ContextWithCancel)
+		Ns     string
+		Result string
+	}{
+		{func(ctx *ContextWithCancel) {
+			ctx.Logger.Debugf("_PrivateNS", "Global logger created")
+		}, "_PrivateNS", ""},
+		{func(ctx *ContextWithCancel) {
+			ctx.Logger.Debugf("*", "Global logger created")
+		}, "*", ""},
+	}
 
-	ctx.Logger.Debugf("*", "Global logger created")
-	time.Sleep(time.Millisecond * 100)
+	for _, test := range tests {
+		buf := new(strings.Builder)
+		logger.SetDefaultScreenIO(buf)
+		globalContext = nil
+
+		globalLogger, natsLogger := logger.NewMockLogger(ctrl), logger.NewMockLogger(ctrl)
+		globalLogger.EXPECT().AddOutput(gomock.Any(), gomock.Any(), logger.LogLevel(0), false, false)
+		globalLogger.EXPECT().Infof("*", "Creating global context with default logger level %v and namespace %v", gomock.Any(), gomock.Any())
+		globalLogger.EXPECT().Debugf(test.Ns, "Global logger created")
+		ctx := CreateMockedContext(ctrl, nil, nil, nil, nil, []*logger.MockLogger{globalLogger, globalLogger, natsLogger})
+		test.Actor(ctx)
+
+		time.Sleep(time.Millisecond * 100)
+
+		if buf.String() != test.Result {
+			t.Errorf("Unexpected output: \n%s\n vs \n%s\n", buf.String(), test.Result)
+		}
+	}
 }
 
 func CreateMockedContext(ctrl *gomock.Controller, natsFilter, natsExclude, gFilter, gExclude *string, loggers []*logger.MockLogger) (ctx *ContextWithCancel) {
