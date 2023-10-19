@@ -8,7 +8,7 @@ This library contains a few useful modules :
 * dynamic types helper
 * atomic primitives
 * file ops
-* mockedOutputs based on json5
+* config based on json5
 * hmac and time primitives
 * try-catch wrapper
 
