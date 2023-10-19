@@ -78,7 +78,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 	}
 
 	// create the strategies global logger (default writes to STDOUT)
-	globalLogger := logger.GetOrCreateGlobalLoggerEx(ctx, logLevel, logger.FilterUnderscore)
+	globalLogger := logger.GetOrCreateGlobalLoggerEx(ctx, logLevel, logger.LogDefaultFilter)
 
 	// add additional writers, if configured
 	if outputsCfg != nil {
