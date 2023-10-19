@@ -73,10 +73,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 		}
 
 		// allow the default stdout log namespace filter to be overridden by the "filter" config field
-		logger.LogDefaultFilter = logger.And(
-			logger.FilterOrDefault(config.GetString("filter"), logger.LogDefaultFilter),
-			logger.Not(logger.FilterOrDefault(config.GetString("exclude"), logger.FilterMatchNone)),
-		)
+		logger.LogDefaultFilter = loggerFromConfig(config, logger.FilterUnderscore)
 		outputsCfg = config.FromKey("outputs")
 	}
 
