@@ -40,3 +40,5 @@ type IConfig interface {
 	// GetRO returns Read-only status
 	GetRO() bool
 }
+
+//go:generate mockgen -destination=mock_config.go -package=utils github.com/andrewelkin/trilib/utils IConfig

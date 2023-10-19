@@ -83,3 +83,6 @@ type Formatter interface {
 	NewLine()
 	NoDateNextLine()
 }
+
+//go:generate mockgen -destination=mock_logger.go -package=logger github.com/andrewelkin/trilib/utils/logger Logger
+//go:generate mockgen -destination=mock_filter.go -package=logger github.com/andrewelkin/trilib/utils/logger FilterObject

@@ -14,4 +14,3 @@ This library contains a few useful modules :
 
 
  ..and more
- 

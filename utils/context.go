@@ -38,7 +38,12 @@ func GetGlobalContext() *ContextWithCancel {
 	return globalContext
 }
 
-func loggerFromConfig(cfg IConfig, defaultFilter logger.FilterFunc) logger.FilterFunc {
+func filterFromConfig(cfg IConfig, defaultFilter logger.FilterFunc) logger.FilterFunc {
+	filterCfg := cfg.GetString("filter")
+	excludeCfg := cfg.GetString("exclude")
+	if filterCfg == nil && excludeCfg == nil {
+		return defaultFilter
+	}
 	filter := logger.And(
 		logger.FilterOrDefault(cfg.GetString("filter"), defaultFilter),
 		logger.Not(logger.FilterOrDefault(cfg.GetString("exclude"), logger.FilterMatchNone)),
@@ -48,14 +53,37 @@ func loggerFromConfig(cfg IConfig, defaultFilter logger.FilterFunc) logger.Filte
 
 // GetOrCreateGlobalContext sets a new global context with logging and cancel
 // Expects a config, which is normally would be a "Logging" section
-func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
+func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 	GIL.Lock()
 	defer GIL.Unlock()
 
 	if globalContext != nil {
 		return globalContext
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+
+	var loggerFunc = logger.GetOrCreateGlobalLoggerEx
+	var defaultFilter = logger.FilterUnderscore
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	for _, opt := range opts {
+		switch optF := any(opt).(type) {
+		case func(context.Context, logger.LogLevel, logger.FilterFunc) logger.Logger:
+			loggerFunc = optF
+		case logger.FilterFunc:
+			defaultFilter = optF
+		case *logger.MockFilterObject:
+			defaultFilter = logger.Filter(optF)
+		case context.Context:
+			ctx = optF
+		default:
+			panic("unknown option type")
+		}
+	}
+
+	if ctx == nil {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	var config IConfig
 
 	if gconfig != nil {
@@ -67,21 +95,18 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 	logNameSpace := "*"
 
 	var outputsCfg IConfig
+
+	// create the strategies global logger (default writes to STDOUT)
+	globalLogger := loggerFunc(ctx, logLevel, defaultFilter)
 	if config != nil {
 		if tmp := config.GetString("loglevel"); tmp != nil {
 			logLevel = logger.ParseLogLevel(*tmp, logger.LogLevelDebug)
 		}
 
 		// allow the default stdout log namespace filter to be overridden by the "filter" config field
-		logger.LogDefaultFilter = logger.And(
-			logger.FilterOrDefault(config.GetString("filter"), logger.LogDefaultFilter),
-			logger.Not(logger.FilterOrDefault(config.GetString("exclude"), logger.FilterMatchNone)),
-		)
 		outputsCfg = config.FromKey("outputs")
+		globalLogger = loggerFunc(ctx, logLevel, filterFromConfig(config, defaultFilter))
 	}
-
-	// create the strategies global logger (default writes to STDOUT)
-	globalLogger := logger.GetOrCreateGlobalLogger(ctx, logLevel)
 
 	// add additional writers, if configured
 	if outputsCfg != nil {
@@ -98,10 +123,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 			case "nats_publisher", "natspublisher", "nats":
 				subject := cfg.GetStringDefault("subject", "default-logger-subject")
 				url := cfg.GetStringDefault("url", nats.DefaultURL)
-				filter := logger.And(
-					logger.FilterOrDefault(cfg.GetString("filter"), logger.FilterMatchAll),
-					logger.Not(logger.FilterOrDefault(cfg.GetString("exclude"), logger.FilterMatchNone)),
-				)
+				filter := filterFromConfig(cfg, logger.FilterMatchAll)
 
 				rawLevel := cfg.GetStringDefault("logLevel", "debug")
 				ansi := cfg.GetBoolDefault("ansicodes", false)
@@ -132,7 +154,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 					cfg.GetStringDefault("path", "/tmp/test_logs"),
 					cfg.GetStringDefault("filePrefix", ""),
 					cfg.GetStringDefault("fileSuffix", ".log"),
-					loggerFromConfig(cfg, logger.FilterMatchAll),
+					filterFromConfig(cfg, logger.FilterMatchAll),
 					cfg.GetBoolDefault("skipRepeating", true)
 
 				fileWriter, err := logger.NewFileWriter(*path, prefix, suffix, skipRepeating)
@@ -149,7 +171,7 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 			case "jsonstream", "jsonout", "prod":
 				rawLevel, filter :=
 					cfg.GetStringDefault("logLevel", "info"),
-					loggerFromConfig(cfg, logger.FilterMatchAll)
+					filterFromConfig(cfg, logger.FilterMatchAll)
 
 				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", filter, *rawLevel)
 				globalLogger.AddOutput(

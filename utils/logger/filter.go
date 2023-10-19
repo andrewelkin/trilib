@@ -7,12 +7,16 @@ import (
 
 type FilterFunc func(string) bool
 
+type FilterObject interface {
+	Filter(string) bool
+}
+
 func FilterMatchNone(string) bool { return false }
 
 func FilterMatchAll(string) bool { return true }
 
 type FilterType interface {
-	func(string) bool | FilterFunc | *regexp.Regexp | string | *string
+	func(string) bool | FilterFunc | *regexp.Regexp | string | *string | *MockFilterObject
 }
 
 func Filter[F FilterType](f F) FilterFunc {
