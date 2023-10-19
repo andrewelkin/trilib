@@ -2,20 +2,13 @@ package logger
 
 import (
 	"fmt"
-	"github.com/dlclark/regexp2"
+	"regexp"
 	"strings"
 	"time"
 )
 
-// FilterMatchNone is a regular expression that matches nothing. It can be used to disable the default output
-// of a logger (e.g. write no logs to stdout).
-var FilterMatchNone = regexp2.MustCompile("^a", regexp2.None)
-
-// FilterMatchAll will match all namespaces
-var FilterMatchAll = regexp2.MustCompile(`^(.*)?$`, regexp2.None)
-
 // FilterUnderscore will match all namespaces except those prefixed with "_"
-var FilterUnderscore = regexp2.MustCompile(`^([^_]+(.*)?)?$`, regexp2.None)
+var FilterUnderscore = Filter(regexp.MustCompile(`^([^_]+(.*)?)?$`))
 
 // ParseLogLevel tries to parse raw into a log level, if it cant, returns defaultLevel
 func ParseLogLevel(raw string, defaultLevel LogLevel) LogLevel {

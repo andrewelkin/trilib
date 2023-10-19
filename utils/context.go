@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"github.com/andrewelkin/trilib/utils/logger"
-	"github.com/dlclark/regexp2"
 	"github.com/nats-io/nats.go"
 	"os"
 	"strings"
@@ -15,10 +14,10 @@ type ContextWithCancel struct {
 	Cancel context.CancelFunc
 	Logger logger.Logger
 	Wg     sync.WaitGroup // wait group
-
 }
 
 var globalContext *ContextWithCancel
+var GIL sync.Mutex
 
 /*
 delete me later -- unused AE 3/17/2023
@@ -39,9 +38,20 @@ func GetGlobalContext() *ContextWithCancel {
 	return globalContext
 }
 
+func loggerFromConfig(cfg IConfig, defaultFilter logger.FilterFunc) logger.FilterFunc {
+	filter := logger.And(
+		logger.FilterOrDefault(cfg.GetString("filter"), defaultFilter),
+		logger.Not(logger.FilterOrDefault(cfg.GetString("exclude"), logger.FilterMatchNone)),
+	)
+	return filter
+}
+
 // GetOrCreateGlobalContext sets a new global context with logging and cancel
 // Expects a config, which is normally would be a "Logging" section
 func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
+	GIL.Lock()
+	defer GIL.Unlock()
+
 	if globalContext != nil {
 		return globalContext
 	}
@@ -63,7 +73,10 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 		}
 
 		// allow the default stdout log namespace filter to be overridden by the "filter" config field
-		logger.LogDefaultFilter = regexp2.MustCompile(*config.GetStringDefault("filter", logger.LogDefaultFilter.String()), regexp2.None)
+		logger.LogDefaultFilter = logger.And(
+			logger.FilterOrDefault(config.GetString("filter"), logger.LogDefaultFilter),
+			logger.Not(logger.FilterOrDefault(config.GetString("exclude"), logger.FilterMatchNone)),
+		)
 		outputsCfg = config.FromKey("outputs")
 	}
 
@@ -85,17 +98,16 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 			case "nats_publisher", "natspublisher", "nats":
 				subject := cfg.GetStringDefault("subject", "default-logger-subject")
 				url := cfg.GetStringDefault("url", nats.DefaultURL)
-				rawFilter := cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
+				filter := logger.And(
+					logger.FilterOrDefault(cfg.GetString("filter"), logger.FilterMatchAll),
+					logger.Not(logger.FilterOrDefault(cfg.GetString("exclude"), logger.FilterMatchNone)),
+				)
+
 				rawLevel := cfg.GetStringDefault("logLevel", "debug")
 				ansi := cfg.GetBoolDefault("ansicodes", false)
 
 				if len(*subject) == 0 {
 					panic("failed to create nats logger : empty publishing subject")
-				}
-
-				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
-				if err != nil {
-					panic("failed to compile log filter regexp: " + err.Error())
 				}
 
 				var nkeyOpt nats.Option
@@ -115,40 +127,31 @@ func GetOrCreateGlobalContext(gconfig IConfig) *ContextWithCancel {
 				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi, false)
 
 			case "filewriter", "file":
-				rawLevel, path, prefix, suffix, rawFilter, skipRepeating :=
+				rawLevel, path, prefix, suffix, filter, skipRepeating :=
 					cfg.GetStringDefault("logLevel", "debug"),
 					cfg.GetStringDefault("path", "/tmp/test_logs"),
 					cfg.GetStringDefault("filePrefix", ""),
 					cfg.GetStringDefault("fileSuffix", ".log"),
-					cfg.GetStringDefault("filter", logger.FilterMatchAll.String()),
+					loggerFromConfig(cfg, logger.FilterMatchAll),
 					cfg.GetBoolDefault("skipRepeating", true)
 
 				fileWriter, err := logger.NewFileWriter(*path, prefix, suffix, skipRepeating)
 				if err != nil {
 					panic("failed to create file writer: " + err.Error())
 				}
-				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
-				if err != nil {
-					panic("failed to compile log filter regexp: " + err.Error())
-				}
 
-				globalLogger.Infof(logNameSpace, "Adding log file output; filter=%s path=%s level=%s", *rawFilter, *path, *rawLevel)
+				globalLogger.Infof(logNameSpace, "Adding log file output; filter=%s path=%s level=%s", filter, *path, *rawLevel)
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
 					logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), false, true)
 
 			case "jsonstream", "jsonout", "prod":
-				rawLevel, rawFilter :=
+				rawLevel, filter :=
 					cfg.GetStringDefault("logLevel", "info"),
-					cfg.GetStringDefault("filter", logger.FilterMatchAll.String())
+					loggerFromConfig(cfg, logger.FilterMatchAll)
 
-				filter, err := regexp2.Compile(*rawFilter, regexp2.None)
-				if err != nil {
-					panic("failed to compile log filter regexp: " + err.Error())
-				}
-
-				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", *rawFilter, *rawLevel)
+				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", filter, *rawLevel)
 				globalLogger.AddOutput(
 					filter,
 					os.Stderr,
