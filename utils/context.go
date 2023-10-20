@@ -41,12 +41,18 @@ func GetGlobalContext() *ContextWithCancel {
 func filterFromConfig(cfg IConfig, defaultFilter logger.FilterFunc) logger.FilterFunc {
 	filterCfg := cfg.GetString("filter")
 	excludeCfg := cfg.GetString("exclude")
+	if filterCfg != nil && *filterCfg == "" {
+		filterCfg = nil
+	}
+	if excludeCfg != nil && *excludeCfg == "" {
+		excludeCfg = nil
+	}
 	if filterCfg == nil && excludeCfg == nil {
 		return defaultFilter
 	}
 	filter := logger.And(
-		logger.FilterOrDefault(cfg.GetString("filter"), defaultFilter),
-		logger.Not(logger.FilterOrDefault(cfg.GetString("exclude"), logger.FilterMatchNone)),
+		logger.FilterOrDefault(filterCfg, defaultFilter),
+		logger.Not(logger.FilterOrDefault(excludeCfg, logger.FilterMatchNone)),
 	)
 	return filter
 }
