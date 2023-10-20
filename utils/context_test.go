@@ -17,6 +17,7 @@ func TestGetOrCreateGlobalContext(t *testing.T) {
 	acceptString := "accept"   // The logger will only accept this namespace
 	excludeString := "exclude" // The logger will exclude this namespace
 	underscoreString := "_testNS"
+	emptystring := ""
 
 	tests := []struct {
 		Actor    func(*ContextWithCancel)
@@ -28,12 +29,12 @@ func TestGetOrCreateGlobalContext(t *testing.T) {
 			ctx.Logger.Debugf(acceptString, "test")
 			ctx.Logger.Debugf(excludeString, "test")
 			ctx.Logger.Debugf(underscoreString, "test")
-		}, "accept test\nexclude test\n_testNS test\n", nil, nil},
+		}, "accept test\nexclude test\n_testNS test\n", &emptystring, &emptystring},
 		{func(ctx *ContextWithCancel) {
 			ctx.Logger.Debugf(acceptString, "test")
 			ctx.Logger.Debugf(excludeString, "test")
 			ctx.Logger.Debugf(underscoreString, "test")
-		}, "accept test\n", &acceptString, nil},
+		}, "accept test\n", &acceptString, &emptystring},
 		{func(ctx *ContextWithCancel) {
 			ctx.Logger.Debugf(acceptString, "test")
 			ctx.Logger.Debugf(excludeString, "test")
