@@ -168,7 +168,10 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 					panic("failed to create file writer: " + err.Error())
 				}
 
-				globalLogger.Infof(logNameSpace, "Adding log file output; filter=%s path=%s level=%s", filter, *path, *rawLevel)
+				cfg.GetStringDefault("filter", "")
+				cfg.GetStringDefault("exclude", "")
+
+				globalLogger.Infof(logNameSpace, "Adding log file output; filter=%s exclude=%s path=%s level=%s", cfg.GetStringDefault("filter", ""), cfg.GetStringDefault("exclude", ""), *path, *rawLevel)
 				globalLogger.AddOutput(
 					filter,
 					fileWriter,
@@ -179,7 +182,7 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 					cfg.GetStringDefault("logLevel", "info"),
 					filterFromConfig(cfg, logger.FilterMatchAll)
 
-				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s level=%s", filter, *rawLevel)
+				globalLogger.Infof(logNameSpace, "Adding log json output; filter=%s exclude=%s level=%s", cfg.GetStringDefault("filter", ""), cfg.GetStringDefault("exclude", ""), *rawLevel)
 				globalLogger.AddOutput(
 					filter,
 					os.Stderr,
