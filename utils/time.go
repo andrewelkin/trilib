@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -54,4 +56,28 @@ func (o *OnceInNSec) CanDo() bool {
 		return true
 	}
 	return false
+}
+
+const (
+	day  = time.Minute * 60 * 24
+	year = 365 * day
+)
+
+func PrintDuration(d time.Duration) string {
+	if d < day {
+		return d.String()
+	}
+
+	var b strings.Builder
+	if d >= year {
+		years := d / year
+		fmt.Fprintf(&b, "%dy", years)
+		d -= years * year
+	}
+
+	days := d / day
+	d -= days * day
+	fmt.Fprintf(&b, "%dd%s", days, d)
+
+	return b.String()
 }

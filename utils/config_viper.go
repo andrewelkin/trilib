@@ -111,10 +111,30 @@ func (c *Vconfig) GetBoolDefault(key string, dflt bool) bool {
 	return c.GetBool(key)
 }
 
+func replaceEnvironment(rs string) string {
+
+	for {
+		ndx0 := strings.Index(rs, "${")
+		if ndx0 >= 0 {
+			ndx := strings.Index(rs[ndx0+2:], "}")
+			if ndx < 0 {
+				envStr := os.Getenv(rs[ndx0+2:])
+				return rs[:ndx0] + envStr
+			}
+			envStr := os.Getenv(rs[ndx0+2 : ndx0+ndx+2])
+			rs = rs[:ndx0] + envStr + rs[ndx0+ndx+3:]
+		} else {
+			break
+		}
+	}
+	return rs
+}
+
 func (c *Vconfig) GetString(key string) *string {
 	key = strings.ToLower(key)
 	rs := c.Viper.GetString(key)
 
+	rs = replaceEnvironment(rs) // ${ENV} replacements first
 	if strings.HasPrefix(rs, "$") {
 		envStr := os.Getenv(rs[1:])
 		return &envStr

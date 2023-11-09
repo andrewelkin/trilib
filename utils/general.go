@@ -130,3 +130,23 @@ func ReversedSlice(s []interface{}) []interface{} {
 	}
 	return a
 }
+
+func MakeSureNegativeIf[T float64 | int64 | float32 | int | int32](condition bool, v T) T {
+	if condition {
+		if v > 0 {
+			v = -v
+		}
+	} else {
+		if v < 0 {
+			v = -v
+		}
+	}
+	return v
+}
+
+func GetValueOrDefault[K comparable, V comparable](m map[K]V, key K, defaultVal V) V {
+	if v, ok := m[key]; ok {
+		return v
+	}
+	return defaultVal
+}
