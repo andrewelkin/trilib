@@ -19,19 +19,6 @@ type ContextWithCancel struct {
 var globalContext *ContextWithCancel
 var GIL sync.Mutex
 
-/*
-delete me later -- unused AE 3/17/2023
-
-func SetGlobalLogger(logger logger.Logger) logger.Logger {
-	if globalContext != nil {
-		globalContext.Logger = logger
-	} else {
-		logger.Warnf("*", "Unable to set global logger")
-	}
-	return logger
-}
-*/
-
 // -----------------------------------------------------------------------------------------[AE: 2023-03-1]-----------/
 
 func GetGlobalContext() *ContextWithCancel {
@@ -91,7 +78,6 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 		ctx, cancel = context.WithCancel(context.Background())
 	}
 	var config IConfig
-
 	if gconfig != nil {
 		config = gconfig.FromKey("logger")
 	}
@@ -103,7 +89,7 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 	var outputsCfg IConfig
 
 	// create the strategies global logger (default writes to STDOUT)
-	globalLogger := loggerFunc(ctx, logLevel, defaultFilter)
+	var globalLogger logger.Logger
 	if config != nil {
 		if tmp := config.GetString("loglevel"); tmp != nil {
 			logLevel = logger.ParseLogLevel(*tmp, logger.LogLevelDebug)
@@ -112,6 +98,8 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 		// allow the default stdout log namespace filter to be overridden by the "filter" config field
 		outputsCfg = config.FromKey("outputs")
 		globalLogger = loggerFunc(ctx, logLevel, filterFromConfig(config, defaultFilter))
+	} else {
+		globalLogger = loggerFunc(ctx, logLevel, defaultFilter)
 	}
 
 	// add additional writers, if configured
