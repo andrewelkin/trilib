@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	ul "github.com/andrewelkin/trilib/utils"
 	"github.com/andrewelkin/trilib/utils/logger"
 	"github.com/gorilla/websocket"
 	"net"
@@ -19,6 +21,7 @@ type Empty struct {
 }
 
 type Socket struct {
+	ctx               context.Context
 	Conn              *websocket.Conn
 	WebsocketDialer   *websocket.Dialer
 	Url               string
@@ -34,8 +37,8 @@ type Socket struct {
 	OnPongReceived    func(data string, socket *Socket)
 	IsConnected       bool
 	sendMu            *sync.Mutex // Prevent "concurrent write to websocket connection"
-	receiveMu         *sync.Mutex
-	logger            logger.Logger
+
+	log logger.Logger
 }
 
 type ConnectionOptions struct {
@@ -45,22 +48,26 @@ type ConnectionOptions struct {
 	Subprotocols   []string
 }
 
-// todo Yet to be done
 type ReconnectionOptions struct {
 }
 
-func NewWebSocket(url string, logger logger.Logger, header http.Header) *Socket {
+func NewWebSocket(ctx context.Context, url string, logger logger.Logger, header http.Header, readBufSize, writeBufSize int) *Socket {
+
 	return &Socket{
+		ctx:           ctx,
 		Url:           url,
-		logger:        logger,
+		log:           logger,
 		RequestHeader: header,
 		ConnectionOptions: ConnectionOptions{
 			UseCompression: false,
 			UseSSL:         true,
 		},
-		WebsocketDialer: &websocket.Dialer{},
-		sendMu:          &sync.Mutex{},
-		receiveMu:       &sync.Mutex{},
+		WebsocketDialer: &websocket.Dialer{
+			ReadBufferSize:  readBufSize,
+			WriteBufferSize: writeBufSize,
+		},
+
+		sendMu: &sync.Mutex{},
 	}
 }
 
@@ -74,9 +81,9 @@ func (socket *Socket) setConnectionOptions() {
 func (socket *Socket) Connect() error {
 	var err error
 	socket.setConnectionOptions()
-	socket.Conn, _, err = socket.WebsocketDialer.Dial(socket.Url, socket.RequestHeader)
+	socket.Conn, _, err = socket.WebsocketDialer.DialContext(socket.ctx, socket.Url, socket.RequestHeader)
 	if err != nil {
-		socket.logger.Warnf(nSpace, "Error while connecting to server '%s' : %v", socket.Url, err)
+		socket.log.Warnf(nSpace, "Error while connecting to server '%s' : %v", socket.Url, err)
 		socket.IsConnected = false
 		if socket.OnConnectError != nil {
 			socket.OnConnectError(err, socket)
@@ -88,27 +95,28 @@ func (socket *Socket) Connect() error {
 		socket.IsConnected = true
 		socket.OnConnected(socket)
 	} else {
-		socket.logger.Debugf(nSpace, "Connected to server %v", socket.Url)
+		socket.log.Debugf(nSpace, "Connected to server %v", socket.Url)
 	}
 
+	socket.Conn.SetCloseHandler(nil)
+	socket.Conn.SetPingHandler(nil)
+	socket.Conn.SetPongHandler(nil)
 	defaultPingHandler := socket.Conn.PingHandler()
 	socket.Conn.SetPingHandler(func(appData string) error {
-		// logger.Debugf(nSpace, "Received PING from server")
+		//socket.log.Debugf(nSpace, "Received PING from server")
 		if socket.OnPingReceived != nil {
 			socket.OnPingReceived(appData, socket)
 		}
 		return defaultPingHandler(appData)
 	})
-
 	defaultPongHandler := socket.Conn.PongHandler()
 	socket.Conn.SetPongHandler(func(appData string) error {
-		// logger.Debugf(nSpace,"Received PONG from server")
+		//socket.log.Debugf(nSpace, "Received PONG from server")
 		if socket.OnPongReceived != nil {
 			socket.OnPongReceived(appData, socket)
 		}
 		return defaultPongHandler(appData)
 	})
-
 	defaultCloseHandler := socket.Conn.CloseHandler()
 	socket.Conn.SetCloseHandler(func(code int, text string) error {
 		result := defaultCloseHandler(code, text)
@@ -116,37 +124,51 @@ func (socket *Socket) Connect() error {
 			socket.IsConnected = false
 			socket.OnDisconnected(errors.New(text), socket)
 		} else {
-			socket.logger.Debugf(nSpace, "Disconnected from the server %v", socket.Url)
+			socket.log.Debugf(nSpace, "Disconnected from the server %v", socket.Url)
 		}
 
 		return result
 	})
 
 	go func() {
-		for {
-			socket.receiveMu.Lock()
-			messageType, message, err := socket.Conn.ReadMessage()
-			socket.receiveMu.Unlock()
-			if err != nil {
+
+		ul.TryBlock{
+			Try: func() {
+				for {
+					messageType, message, err := socket.Conn.ReadMessage()
+					if err != nil {
+						if socket.OnReadError != nil {
+							socket.OnReadError(err, socket)
+						} else {
+							socket.log.Warnf(nSpace, "read error: %v", err)
+						}
+						return
+					}
+
+					switch messageType {
+					case websocket.TextMessage:
+						if socket.OnTextMessage != nil {
+							socket.OnTextMessage(string(message), socket)
+						}
+					case websocket.BinaryMessage:
+						if socket.OnBinaryMessage != nil {
+							socket.OnBinaryMessage(message, socket)
+						}
+					}
+				}
+			},
+			Catch: func(e ul.Exception) {
 				if socket.OnReadError != nil {
-					socket.OnReadError(err, socket)
+					go socket.OnReadError(err, socket)
 				} else {
-					socket.logger.Warnf(nSpace, "read error: %v", err)
+					socket.log.Debugf(nSpace, "Exception while reading from the server %v", socket.Url)
 				}
 				return
-			}
+			},
+			Finally: func() {
+			},
+		}.Do()
 
-			switch messageType {
-			case websocket.TextMessage:
-				if socket.OnTextMessage != nil {
-					socket.OnTextMessage(string(message), socket)
-				}
-			case websocket.BinaryMessage:
-				if socket.OnBinaryMessage != nil {
-					socket.OnBinaryMessage(message, socket)
-				}
-			}
-		}
 	}()
 	return nil
 }
@@ -157,6 +179,20 @@ func (socket *Socket) SendPingFrame() error {
 	}
 	// logger.Debugf(nSpace, "Forcing PING frame")
 	err := socket.Conn.WriteControl(websocket.PingMessage, []byte(""), time.Now().Add(time.Second))
+	if err == websocket.ErrCloseSent {
+		return nil
+	} else if e, ok := err.(net.Error); ok && e.Temporary() {
+		return nil
+	}
+	return err
+}
+
+func (socket *Socket) SendPongFrame() error {
+	if !socket.IsConnected {
+		return nil
+	}
+	// logger.Debugf(nSpace, "Forcing PING frame")
+	err := socket.Conn.WriteControl(websocket.PongMessage, []byte(""), time.Now().Add(time.Second))
 	if err == websocket.ErrCloseSent {
 		return nil
 	} else if e, ok := err.(net.Error); ok && e.Temporary() {
@@ -189,7 +225,7 @@ func (socket *Socket) Close() {
 	}
 	err := socket.send(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
-		socket.logger.Warnf(nSpace, "Tried to close websocket gracefully, got error:", err)
+		socket.log.Warnf(nSpace, "Tried to close websocket gracefully, got error:", err)
 	}
 	socket.Conn.Close()
 	if socket.OnDisconnected != nil {
