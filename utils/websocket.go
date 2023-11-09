@@ -50,6 +50,7 @@ type ConnectionOptions struct {
 type ReconnectionOptions struct {
 }
 
+// NewWebSocket creates new websocket
 func NewWebSocket(ctx context.Context, url string, logger logger.Logger, header http.Header, readBufSize, writeBufSize int) *Socket {
 
 	return &Socket{
