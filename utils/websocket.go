@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	ul "github.com/andrewelkin/trilib/utils"
 	"github.com/andrewelkin/trilib/utils/logger"
 	"github.com/gorilla/websocket"
 	"net"
@@ -132,7 +131,7 @@ func (socket *Socket) Connect() error {
 
 	go func() {
 
-		ul.TryBlock{
+		TryBlock{
 			Try: func() {
 				for {
 					messageType, message, err := socket.Conn.ReadMessage()
@@ -157,7 +156,7 @@ func (socket *Socket) Connect() error {
 					}
 				}
 			},
-			Catch: func(e ul.Exception) {
+			Catch: func(e Exception) {
 				if socket.OnReadError != nil {
 					go socket.OnReadError(err, socket)
 				} else {
