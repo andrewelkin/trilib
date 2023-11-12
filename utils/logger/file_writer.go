@@ -42,11 +42,11 @@ func NewFileWriter(basePath string, prefix, suffix *string, skipRepeating bool) 
 	// make sure the base directory exists
 	baseExists, err := exists(basePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check base path: %w", err)
+		return nil, fmt.Errorf("failed to check base path: %v", err)
 	}
 	if !baseExists {
 		if err := os.Mkdir(basePath, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create log directory: %w", err)
+			return nil, fmt.Errorf("failed to create log directory: %v", err)
 		}
 	}
 
@@ -150,7 +150,7 @@ func (fw *FileWriter) getOrCreateFile(name string) (*os.File, error) {
 	// check if the file already exists; if so, we append a separator later
 	fileExists, err := exists(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if file exists: %w", err)
+		return nil, fmt.Errorf("failed to check if file exists: %v", err)
 	}
 
 	file, err := os.OpenFile(fullPath,
@@ -162,7 +162,7 @@ func (fw *FileWriter) getOrCreateFile(name string) (*os.File, error) {
 	// apply the separator if this is not a new file
 	if fileExists {
 		if _, err := file.WriteString(separator); err != nil {
-			return nil, fmt.Errorf("failed to write separator to existing file: %w", err)
+			return nil, fmt.Errorf("failed to write separator to existing file: %v", err)
 		}
 	}
 	fw.currentFile = file
