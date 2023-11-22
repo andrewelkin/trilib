@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"github.com/andrewelkin/trilib/utils/logger"
 	"github.com/nats-io/nats.go"
 	"os"
@@ -132,13 +133,13 @@ func GetOrCreateGlobalContext(gconfig IConfig, opts ...any) *ContextWithCancel {
 					var err error
 					nkeyOpt, err = nats.NkeyOptionFromSeed(nSeedFile)
 					if err != nil {
-						panic(err)
+						panic(fmt.Sprintf("failed to create nats logger : unable to get NATS seed from %s: %v", nSeedFile, err))
 					}
 				}
 
 				nc, err := nats.Connect(*url, nkeyOpt)
 				if err != nil {
-					panic(err)
+					panic(fmt.Sprintf("failed to create nats logger : unable to connect to NATS %s: %v", *url, err))
 				}
 				globalLogger.AddOutput(filter, logger.NewNatsLogger(*subject, nc), logger.ParseLogLevel(*rawLevel, logger.LogLevelDebug), ansi, false)
 
