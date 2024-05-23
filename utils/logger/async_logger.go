@@ -235,9 +235,14 @@ func (lgr *AsyncLogger) writeLogAccordingToLevel(msg logMessage) {
 		wg.Add(1)
 		go func(output logOutput) {
 			defer wg.Done()
-
 			txt := output.formatter.String(msg)
-			_, _ = io.WriteString(output.dst, txt)
+
+			if output.dst == defaultScreenDst { // it means screen
+				DefaultScreenOutputFunc(output.dst, txt)
+			} else {
+				_, _ = io.WriteString(output.dst, txt)
+			}
+
 		}(outputConfig)
 	}
 

@@ -15,7 +15,8 @@ var dynTypeRegistry = make(map[string]reflect.Type)
 // name     string          service name
 // i        interface{}     service class primitive
 func RegisterDynType(name string, i interface{}) {
-	fmt.Printf("Registering dynamic type %s\n", name)
+
+	logger.DefaultScreenOutputFunc(nil, fmt.Sprintf("Registering dynamic type %s\n", name))
 	t := reflect.TypeOf(i).Elem()
 	dynTypeRegistry[fmt.Sprintf("%v", t)] = t
 	dynTypeRegistry[name] = t
